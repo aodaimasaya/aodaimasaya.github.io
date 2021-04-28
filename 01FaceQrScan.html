@@ -3,14 +3,23 @@
     <title>Lab Face Qr Scan Lab</title>
 		<!DOCTYPE html>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-		<script
-			src="https://code.jquery.com/jquery-3.6.0.min.js"
-			integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
-			crossorigin="anonymous"></script>
+		<style>
+		</style>
+
+		<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    
+
+		<!--jQuery Face Detection Plugin https://github.com/jaysalvat/jquery.facedetection-->
+		<!--<script src="path/to/dist/jquery.facedetection.min.js"></script>-->
+
+		<!--clmtrackr https://github.com/auduno/clmtrackr-->
+		<script src="js/clmtrackr/clmtrackr.min.js"></script>
+		<script src="js/clmtrackr/model_pca_20_svm.js"></script>
+
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
   </head>
@@ -22,8 +31,94 @@
 		<h5>Lab Face Qr Scan Lab</h5>
 
 		<div>
-
+			<video id="inputVideo" width="400" height="300" muted autoplay playsinline></video>
+			
+			<canvas id="canvas" width="400" height="300"></canvas>
 		</div>
 
   </body>
+	<script>
+	$(function(){
+
+const _video = document.getElementById('inputVideo');
+const _canvas = document.getElementById('canvas');
+
+// カメラ設定
+const FACING_MODE_ENVIRONMENT = "environment";
+const FACING_MODE_USER = "user";
+var facingModeParameter = FACING_MODE_ENVIRONMENT;
+
+const constraints = {
+	video: {
+		facingMode: facingModeParameter,
+	}
+};
+
+navigator.mediaDevices.getUserMedia(constraints).then( ( stream ) => {
+	_video.srcObject = stream;
+	_stream = stream;
+
+	// スキャン実行
+	// setTimeout(() => { checkImage() }, 200);
+	
+	// 描画
+	//trackerInitialize(() => { drawLoop() }, 200);
+	
+	// 顔認識初期化処理
+	setTimeout(() => { drawLoop() }, 200);
+
+})
+.catch( (err) => {
+	alert('このデバイスではカメラは利用できません。' + err.name + ": " + err.message);
+})
+;
+
+// 顔認識初期化処理
+var _tracker = new clm.tracker();
+function trackerInitialize(){
+
+	// 取得している動画をCanvasに描画
+	_canvas.width = _video.videoWidth;
+	_canvas.height = _video.videoHeight;
+
+	// https://qiita.com/mizno/items/4f18d0a9f8a9f53decfd
+//	_tracker.init(pModel); // ここで初期化、引数にpModelを渡す。
+	_tracker.init();
+	
+	// positions = [[x_0, y_0], [x_1,y_1], ... ] 配列が帰ります。
+	var positions = _tracker.getCurrentPosition(); // 解析されて位置ベクトル情報
+	// 引数には入力用のDOM要素を渡します。2番目の引数で入力位置を設定できるようです。
+	_tracker.start(_video);
+	var box = [0, 0, 400, 260];
+	_tracker.start(_video, box);
+
+	// 描画
+	trackerInitialize(() => { drawLoop() }, 200);
+
+}
+
+function drawLoop() {
+
+	// 取得している動画をCanvasに描画
+	// Canvasの大きさは認識率に影響、なるべく大きく設定すること
+	//_canvas.width = _video.videoWidth * 2;
+	//_canvas.height = _video.videoHeight * 2;
+
+	const ctx = _canvas.getContext('2d');
+	//ctx.drawImage(_video, 0, 0, _canvas.width, _canvas.height);
+
+	// Canvasからデータを取得
+	//const imageData = ctx.getImageData(0, 0, _canvas.width, _canvas.height);
+
+		requestAnimationFrame(drawLoop); // ここで毎フレームdrawLoopを呼び出すように設定します。
+		ctx.clearRect(0, 0, _canvas.width, _canvas.height); // 毎フレーム出力用のキャンバスをクリアします。これをしないと重ね書きのようになってしまいます。
+		_tracker.draw(_canvas); // 判定結果をcanvasに描画します。
+
+	// 再度実行*@
+	setTimeout(() => { drawLoop() }, 200);
+
+}
+
+	});
+	</script>
 </html>
